@@ -119,18 +119,11 @@
     .sidebar-footer { padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.14); display: flex; flex-direction: column; gap: 8px; }
 
     .main-content {
-      flex: 1;
-      width: 100%;
-      max-width: 880px;
-      margin: 0 auto;
+      flex: 1; width: 100%; max-width: 880px; margin: 0 auto;
       padding: calc(14px + env(safe-area-inset-top)) 14px calc(var(--nav-height) + 22px + env(safe-area-inset-bottom));
     }
-    .main-content.in-chat {
-      padding-bottom: calc(var(--nav-height) + 8px + env(safe-area-inset-bottom));
-    }
-    body.keyboard-open .main-content.in-chat {
-      padding-bottom: 8px;
-    }
+    .main-content.in-chat { padding-bottom: calc(var(--nav-height) + 8px + env(safe-area-inset-bottom)); }
+    body.keyboard-open .main-content.in-chat { padding-bottom: 8px; }
 
     @media (min-width: 900px) {
       .sidebar { display: flex; }
@@ -138,7 +131,7 @@
       .bottom-nav { display: none !important; }
     }
 
-    /* BOTTOM NAV - LIMPA E CONSISTENTE */
+    /* BOTTOM NAV */
     .bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0;
       height: calc(var(--nav-height) + env(safe-area-inset-bottom));
@@ -158,7 +151,7 @@
     .nav-item.active { background: var(--brand-orange-soft); color: var(--brand-orange-accessible); font-weight: 700; }
     body.dark .nav-item.active { color: var(--brand-orange); }
 
-    /* HEADER INTEGRADO */
+    /* HEADER */
     .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; }
     .greeting-wrap { display: flex; align-items: center; gap: 10px; min-width: 0; }
     .avatar-circle {
@@ -179,7 +172,6 @@
       font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; padding: 0 4px;
     }
 
-    /* PAINEL UNIFICADO DE CONTROLES (SEM CAIXAS SOLTAS) */
     .controls-strip {
       display: flex; justify-content: space-between; align-items: center; gap: 8px;
       margin-bottom: 12px; background: var(--bg-card); padding: 6px 8px;
@@ -196,7 +188,6 @@
     .chip.active { background: var(--brand-blue); color: #FFFFFF; }
     body.dark .chip.active { background: var(--brand-orange); color: var(--brand-blue); }
 
-    /* HERO CARD */
     .hero-card {
       background: linear-gradient(135deg, #0F3D56 0%, #19597B 100%);
       color: #FFFFFF; border-radius: var(--radius-lg); padding: 18px;
@@ -224,7 +215,6 @@
     }
     .mei-card.visible { display: flex; }
 
-    /* AÇÃO PRINCIPAL SIMÉTRICA (NÃO DEFORMA EM TELA PEQUENA) */
     .action-dock { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
     .action-dock-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .voice-main-btn {
@@ -243,7 +233,7 @@
       display: flex; gap: 12px; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color);
       border-left: 4px solid var(--brand-orange); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 12px; box-shadow: var(--shadow-sm);
     }
-    .ping-focus-card.urgent { border-left-color: var(--expense-red); background: var(--bg-card); }
+    .ping-focus-card.urgent { border-left-color: var(--expense-red); }
 
     .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-sm); margin-bottom: 12px; width: 100%; }
     .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; flex-wrap: wrap; }
@@ -269,27 +259,21 @@
     }
     .mini-icon-btn.danger:hover { background: var(--expense-soft); color: var(--expense-red); }
 
-    /* SEM TRANSFORM NA TROCA DE ABA (EVITA BUG DE RENDERIZAÇÃO NO iOS) */
     .tab-view { display: none; width: 100%; }
     .tab-view.active { display: block; }
 
-    /* CHAT RESPONSIVO PARA TECLADO iOS */
+    /* CHAT */
     .chat-container {
       display: flex; flex-direction: column;
       height: calc(100dvh - var(--nav-height) - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
       background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-color);
       overflow: hidden; box-shadow: var(--shadow-sm);
     }
-    @media (min-width: 900px) {
-      .chat-container { height: calc(100dvh - 70px); max-height: 760px; }
-    }
+    @media (min-width: 900px) { .chat-container { height: calc(100dvh - 70px); max-height: 760px; } }
     .chat-header { background: var(--brand-blue); color: #FFFFFF; padding: 12px 14px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
     .chat-status { font-size: 12px; color: #6EE7B7; display: flex; align-items: center; gap: 5px; }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #34D399; }
-    .chat-messages {
-      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px; display: flex; flex-direction: column; gap: 10px;
-      background-color: var(--bg-app);
-    }
+    .chat-messages { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px; display: flex; flex-direction: column; gap: 10px; background-color: var(--bg-app); }
     .msg-row { display: flex; flex-direction: column; max-width: 88%; }
     .msg-row.user { align-self: flex-end; align-items: flex-end; }
     .msg-row.ping { align-self: flex-start; align-items: flex-start; }
@@ -324,7 +308,6 @@
     }
     body.dark .suggestion-pill { color: var(--brand-orange); }
 
-    /* MICROFONE AO LADO DO ENVIAR */
     .chat-input-bar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: var(--bg-card); border-top: 1px solid var(--border-color); flex-shrink: 0; }
     .chat-input {
       flex: 1; min-width: 0; border: 1px solid var(--border-color); background: var(--bg-app); color: var(--text-primary);
@@ -389,7 +372,6 @@
 
     .form-group { margin-bottom: 12px; }
     .form-label { display: block; font-size: calc(12.5px * var(--font-scale)); font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; }
-    /* 16px evita zoom automático no Safari iOS */
     .form-control { width: 100%; padding: 11px 12px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-app); color: var(--text-primary); font-size: 16px; font-family: inherit; outline: none; min-height: 44px; }
     .form-control:focus { border-color: var(--brand-orange); }
 
@@ -406,7 +388,6 @@
     }
     .toast.show { transform: translateX(-50%) translateY(0); }
 
-    /* Oculto por padrão para nunca gerar tarja preta no iOS! */
     #confetti-canvas { display: none; position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 250; }
     .ping-mascot { flex-shrink: 0; }
   </style>
@@ -416,7 +397,7 @@
 <canvas id="confetti-canvas"></canvas>
 <div id="toast" class="toast"><span id="toast-icon">💧</span><span id="toast-msg">Salvo!</span></div>
 
-<!-- ONBOARDING LIMPO E DIRETO -->
+<!-- ONBOARDING -->
 <div id="onboarding-screen" class="onboarding-screen" style="display:none;">
   <div class="onboarding-card">
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
@@ -681,7 +662,22 @@
 <div id="modal-goal-move" class="modal-backdrop" onclick="closeModalOnBackdrop(event, 'modal-goal-move')"><div class="modal-sheet"><div class="section-header"><h2 class="section-title">Movimentar Meta</h2><button class="icon-btn" onclick="closeModal('modal-goal-move')">✕</button></div><input type="hidden" id="goal-move-id" /><p id="goal-move-name" style="font-weight:700; margin-bottom:12px;"></p><div class="form-group"><input id="goal-move-val" class="form-control" type="number" step="0.01" min="0.01" value="50" /></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><button class="btn btn-secondary" onclick="applyGoalMove(-1)">➖ Retirar</button><button class="btn btn-income" onclick="applyGoalMove(1)">🐷 Guardar</button></div></div></div>
 <div id="modal-bill" class="modal-backdrop" onclick="closeModalOnBackdrop(event, 'modal-bill')"><div class="modal-sheet"><div class="section-header"><h2 class="section-title" id="modal-bill-title">Conta Fixa</h2><button class="icon-btn" onclick="closeModal('modal-bill')">✕</button></div><form onsubmit="saveBillForm(event)"><input type="hidden" id="bill-edit-id" value="" /><div class="form-group"><label class="form-label">Nome</label><input id="bill-name" class="form-control" type="text" required /></div><div class="form-group" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><label class="form-label">Valor</label><input id="bill-amount" class="form-control" type="number" step="0.01" min="0.01" required /></div><div><label class="form-label">Dia</label><input id="bill-day" class="form-control" type="number" min="1" max="31" value="15" required /></div></div><div class="form-group"><label class="form-label">Categoria</label><select id="bill-cat" class="form-control"><option value="Internet">🌐 Internet</option><option value="Energia">⚡ Energia</option><option value="Água">💧 Água</option><option value="Aluguel">🏠 Aluguel</option><option value="Assinaturas">📱 Assinaturas</option><option value="Saúde">💊 Saúde</option></select></div><div style="display:flex; gap:10px;"><button type="button" id="btn-delete-bill-modal" class="btn btn-danger" style="display:none;" onclick="deleteCurrentEditingBill()">🗑️</button><button type="submit" class="btn btn-primary" style="flex:1;">Salvar</button></div></form></div></div>
 <div id="modal-edit-profile" class="modal-backdrop" onclick="closeModalOnBackdrop(event, 'modal-edit-profile')"><div class="modal-sheet"><div class="section-header"><h2 class="section-title">Editar Perfil</h2><button class="icon-btn" onclick="closeModal('modal-edit-profile')">✕</button></div><form onsubmit="saveProfileEdit(event)"><div class="form-group"><label class="form-label">Nome</label><input id="ep-name" class="form-control" type="text" required /></div><div class="form-group"><label class="form-label">Perfil</label><select id="ep-role" class="form-control"><option value="CLT">💼 CLT</option><option value="Autônomo / MEI">🚀 Autônomo / MEI</option><option value="Aposentado">🏅 Aposentado(a)</option><option value="Outro">✨ Outro</option></select></div><div class="form-group"><label class="form-label">Renda Padrão</label><input id="ep-salary" class="form-control" type="number" step="0.01" min="0" /></div><button type="submit" class="btn btn-primary btn-block">Salvar</button></form></div></div>
-<div id="modal-voice" class="modal-backdrop" onclick="closeModalOnBackdrop(event, 'modal-voice')"><div class="modal-sheet" style="text-align:center;"><div class="section-header"><h2 class="section-title">🎙️ Pode falar</h2><button class="icon-btn" onclick="stopVoiceRecognition()">✕</button></div><div id="voice-ring" class="voice-ring listening">🎙️</div><p id="voice-status" style="font-weight:700; margin-bottom:6px;">Ouvindo...</p><p id="voice-transcript" style="font-size:14px; color:var(--text-secondary); min-height:40px; padding:8px; background:var(--bg-app); border-radius:12px;"></p><div id="voice-fallback-area" style="margin-top:12px; display:none;"><p style="font-size:12.5px; color:var(--expense-red); margin-bottom:8px;" id="voice-error-msg"></p></div><button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="stopVoiceRecognition()">Cancelar</button></div></div>
+
+<!-- MODAL DE VOZ COM AUTO-ENVIO POR SILÊNCIO + BOTÃO ENVIAR -->
+<div id="modal-voice" class="modal-backdrop" onclick="closeModalOnBackdrop(event, 'modal-voice')">
+  <div class="modal-sheet" style="text-align:center;">
+    <div class="section-header"><h2 class="section-title">🎙️ Pode falar</h2><button class="icon-btn" onclick="cancelVoiceRecognition()">✕</button></div>
+    <div id="voice-ring" class="voice-ring listening">🎙️</div>
+    <p id="voice-status" style="font-weight:700; margin-bottom:6px;">Ouvindo...</p>
+    <p id="voice-transcript" style="font-size:15px; font-weight:600; color:var(--text-primary); min-height:44px; padding:10px; background:var(--bg-app); border-radius:12px;">Aguardando sua voz...</p>
+    <div id="voice-fallback-area" style="margin-top:10px; display:none;"><p style="font-size:12.5px; color:var(--expense-red); margin-bottom:6px;" id="voice-error-msg"></p></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px;">
+      <button class="btn btn-secondary" onclick="cancelVoiceRecognition()">Cancelar</button>
+      <button id="voice-send-btn" class="btn btn-primary" onclick="sendVoiceNow()" disabled style="opacity:0.5;">✅ Enviar</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-confirm" class="modal-backdrop" onclick="closeModalOnBackdrop(event, 'modal-confirm')"><div class="modal-sheet"><h2 class="section-title" id="confirm-title" style="margin-bottom:8px;">Confirmar</h2><p id="confirm-desc" style="color:var(--text-secondary); margin-bottom:18px;"></p><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><button class="btn btn-secondary" onclick="closeModal('modal-confirm')">Cancelar</button><button class="btn btn-danger" id="confirm-yes-btn">Confirmar</button></div></div></div>
 <div id="modal-alerts" class="modal-backdrop" onclick="closeModalOnBackdrop(event, 'modal-alerts')"><div class="modal-sheet"><div class="section-header"><h2 class="section-title">🔔 Vencimentos</h2><button class="icon-btn" onclick="closeModal('modal-alerts')">✕</button></div><div id="alerts-modal-list"></div></div></div>
 
@@ -712,7 +708,6 @@
     'Outros': { icon: '📦', color: '#94A3B8', type: 'expense' }
   };
 
-  // Ajuste dinâmico do teclado no iPhone/Android (evita vão branco e esmagamento do chat)
   if (window.visualViewport) {
     const syncViewport = () => {
       const vv = window.visualViewport;
@@ -807,7 +802,7 @@
     const u = currentUser(); if (!u) return;
     document.getElementById('ai-mode-badge').textContent = u.geminiApiKey ? 'Online • IA Avançada' : 'Online';
     const memBox = document.getElementById('learned-memory-box'), count = (u.learnedRules || []).length;
-    memBox.innerHTML = count > 0 ? `${count} preferência(s) aprendida(s) nas suas conversas.` : `O Ping aprende automaticamente quando você corrige um lançamento.`;
+    memBox.innerHTML = count > 0 ? `${count} preferência(s) aprendida(s).` : `O Ping aprende automaticamente quando você corrige um lançamento.`;
   }
 
   async function callGeminiAI(userMessage) {
@@ -822,6 +817,98 @@
     if (!resp.ok) throw new Error('API Error ' + resp.status);
     const data = await resp.json();
     return JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text);
+  }
+
+  // ==================== VOZ CORRIGIDA PARA iOS SAFARI (AUTO-ENVIO POR SILÊNCIO + BOTÃO ENVIAR) ====================
+  let activeRecognition = null, voiceFromHome = false, latestVoiceText = '', voiceSilenceTimer = null, voiceAlreadyHandled = false;
+
+  function startVoiceRecognition(fh = false) {
+    voiceFromHome = fh;
+    latestVoiceText = '';
+    voiceAlreadyHandled = false;
+    clearTimeout(voiceSilenceTimer);
+
+    document.getElementById('voice-fallback-area').style.display = 'none';
+    document.getElementById('voice-ring').classList.add('listening');
+    document.getElementById('voice-status').textContent = 'Ouvindo...';
+    document.getElementById('voice-transcript').textContent = 'Aguardando sua voz...';
+    const sendBtn = document.getElementById('voice-send-btn');
+    sendBtn.disabled = true;
+    sendBtn.style.opacity = '0.5';
+    openModal('modal-voice');
+
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { showVoiceError('Navegador sem ditado nativo.'); return; }
+
+    try {
+      activeRecognition = new SR();
+      activeRecognition.lang = 'pt-BR';
+      activeRecognition.interimResults = true;
+      activeRecognition.continuous = false;
+
+      activeRecognition.onstart = () => {
+        document.getElementById('voice-status').textContent = 'Pode falar (envia ao pausar)...';
+      };
+
+      activeRecognition.onresult = (ev) => {
+        let fullText = '';
+        let isAnyFinal = false;
+        for (let i = 0; i < ev.results.length; i++) {
+          fullText += ev.results[i][0].transcript + ' ';
+          if (ev.results[i].isFinal) isAnyFinal = true;
+        }
+        fullText = fullText.trim();
+        if (!fullText) return;
+
+        latestVoiceText = fullText;
+        document.getElementById('voice-transcript').textContent = `"${fullText}"`;
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = '1';
+
+        clearTimeout(voiceSilenceTimer);
+        voiceSilenceTimer = setTimeout(() => sendVoiceNow(), isAnyFinal ? 450 : 1500);
+      };
+
+      activeRecognition.onend = () => {
+        if (!voiceAlreadyHandled && latestVoiceText.trim()) sendVoiceNow();
+      };
+
+      activeRecognition.onerror = (ev) => {
+        if (voiceAlreadyHandled || ev.error === 'aborted') return;
+        if (latestVoiceText.trim()) { sendVoiceNow(); return; }
+        showVoiceError(ev.error === 'not-allowed' ? 'Libere o microfone nos ajustes do Safari.' : `Não ouvi (${ev.error}).`);
+      };
+
+      activeRecognition.start();
+    } catch (e) {
+      showVoiceError('Não foi possível abrir o microfone.');
+    }
+  }
+
+  function sendVoiceNow() {
+    if (voiceAlreadyHandled) return;
+    const txt = latestVoiceText.trim();
+    if (!txt) return;
+    voiceAlreadyHandled = true;
+    clearTimeout(voiceSilenceTimer);
+    if (activeRecognition) { try { activeRecognition.stop(); } catch (e) {} activeRecognition = null; }
+    closeModal('modal-voice');
+    if (voiceFromHome) switchTab('chat');
+    sendQuickPrompt(txt);
+  }
+
+  function cancelVoiceRecognition() {
+    voiceAlreadyHandled = true;
+    clearTimeout(voiceSilenceTimer);
+    if (activeRecognition) { try { activeRecognition.abort(); } catch (e) {} activeRecognition = null; }
+    closeModal('modal-voice');
+  }
+
+  function showVoiceError(m) {
+    document.getElementById('voice-ring').classList.remove('listening');
+    document.getElementById('voice-status').textContent = 'Indisponível';
+    document.getElementById('voice-error-msg').textContent = m;
+    document.getElementById('voice-fallback-area').style.display = 'block';
   }
 
   // ==================== MOTOR NLP ====================
@@ -1209,24 +1296,13 @@
 
   function launchConfetti(){
     const c=document.getElementById('confetti-canvas'),ctx=c.getContext('2d');
-    c.style.display='block';
-    c.width=window.innerWidth;c.height=window.innerHeight;
+    c.style.display='block'; c.width=window.innerWidth; c.height=window.innerHeight;
     const ps=Array.from({length:36},()=>({x:Math.random()*c.width,y:-20,w:8,h:8,vy:3+Math.random()*4,vx:-2+Math.random()*4,color:['#FF6B00','#059669','#0F3D56','#FBBF24'][Math.floor(Math.random()*4)]}));
     let f=0;
-    (function t(){
-      ctx.clearRect(0,0,c.width,c.height);
-      ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.w,p.h);});
-      if(++f<70)requestAnimationFrame(t);
-      else { ctx.clearRect(0,0,c.width,c.height); c.style.display='none'; }
-    })();
+    (function t(){ ctx.clearRect(0,0,c.width,c.height); ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.w,p.h);}); if(++f<70)requestAnimationFrame(t); else { ctx.clearRect(0,0,c.width,c.height); c.style.display='none'; } })();
   }
 
   function quickReceiveSalary(){const u=currentUser();if(!u?.salaryCents)return;const td=new Date().toISOString().split('T')[0];addTransactionsWithInstallments({type:'income',paymentMethod:'pix',installments:1,category:'Salário',desc:'Salário do Mês',amountCents:u.salaryCents,date:td.startsWith(selectedMonth)?td:`${selectedMonth}-05`,scope:'personal'});saveStore();playPingSound();launchConfetti();renderAll();showToast('Salário pingou! 🎉','💸');}
-
-  let activeRecognition=null, voiceFromHome=false;
-  async function startVoiceRecognition(fh=false){voiceFromHome=fh;document.getElementById('voice-fallback-area').style.display='none';document.getElementById('voice-ring').classList.add('listening');document.getElementById('voice-status').textContent='Ouvindo...';document.getElementById('voice-transcript').textContent='';openModal('modal-voice');if(navigator.mediaDevices?.getUserMedia){try{const s=await navigator.mediaDevices.getUserMedia({audio:true});s.getTracks().forEach(t=>t.stop());}catch(e){showVoiceError('Permissão ao microfone negada.');return;}}const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){showVoiceError('Navegador sem ditado nativo.');return;}try{activeRecognition=new SR();activeRecognition.lang='pt-BR';activeRecognition.interimResults=true;activeRecognition.onstart=()=>document.getElementById('voice-status').textContent='Pode falar...';activeRecognition.onresult=(ev)=>{let ft='',im='';for(let i=ev.resultIndex;i<ev.results.length;i++){if(ev.results[i].isFinal)ft+=ev.results[i][0].transcript;else im+=ev.results[i][0].transcript;}document.getElementById('voice-transcript').textContent=`"${ft||im}"`;if(ft.trim()){stopVoiceRecognition();if(voiceFromHome)switchTab('chat');sendQuickPrompt(ft.trim());}};activeRecognition.onerror=(ev)=>showVoiceError(`Erro (${ev.error}).`);activeRecognition.start();}catch(e){showVoiceError('Erro ao iniciar.');}}
-  function showVoiceError(m){document.getElementById('voice-ring').classList.remove('listening');document.getElementById('voice-status').textContent='Indisponível';document.getElementById('voice-error-msg').textContent=m;document.getElementById('voice-fallback-area').style.display='block';}
-  function stopVoiceRecognition(){if(activeRecognition){try{activeRecognition.stop();}catch(e){}activeRecognition=null;}closeModal('modal-voice');}
 
   function formatBRL(c,m=true){const u=currentUser();if(m&&u&&u.hideBalances)return 'R$ •••••';return 'R$ '+((c||0)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
   function getNowTime(){return new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
@@ -1244,9 +1320,7 @@
     document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     document.querySelectorAll('.sidebar-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')?.includes(`'${id}'`)));
     window.scrollTo(0, 0);
-    if(id==='reports')renderReports();
-    if(id==='bills')renderBills();
-    if(id==='chat')scrollChatBottom();
+    if(id==='reports')renderReports(); if(id==='bills')renderBills(); if(id==='chat')scrollChatBottom();
   }
 
   function scrollChatBottom(){const el=document.getElementById('chat-messages');if(el)el.scrollTop=el.scrollHeight;}
@@ -1278,7 +1352,7 @@
   function importBackupJSON(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);d.id='u_'+Date.now();store.users.push(d);store.activeUserId=d.id;saveStore();enterApp();showToast('Restaurado!','💾');}catch(err){showToast('Inválido!','⚠️');}};r.readAsText(f);}
   function openModal(id){document.getElementById(id).classList.add('open');}
   function closeModal(id){document.getElementById(id).classList.remove('open');}
-  function closeModalOnBackdrop(e,id){if(e.target.id===id){if(id==='modal-voice')stopVoiceRecognition();else closeModal(id);}}
+  function closeModalOnBackdrop(e,id){if(e.target.id===id){if(id==='modal-voice')cancelVoiceRecognition();else closeModal(id);}}
   function renderAll(){renderHome();renderChat();renderReports();renderBills();}
 
   if (currentUser()) enterApp(); else renderOnboarding();
