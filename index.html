@@ -520,8 +520,8 @@
         <div class="chat-messages" id="chat-messages"></div>
 
         <div class="chat-suggestions">
+          <button class="suggestion-pill" onclick="sendQuickPrompt('Cartão vence dia 30 - 400 reais')">📅 Conta a vencer</button>
           <button class="suggestion-pill" onclick="sendQuickPrompt('Quanto posso gastar hoje?')">🎯 Quanto posso hoje?</button>
-          <button class="suggestion-pill" onclick="sendQuickPrompt('Quanto já tenho comprometido para o mês que vem?')">📆 Próx. mês</button>
           <button class="suggestion-pill" onclick="sendQuickPrompt('Gastei 80 de gasolina')">🚗 Transporte</button>
           <button class="suggestion-pill" onclick="sendQuickPrompt('Dividi uma conta de 120 reais em 3 pessoas')">🤝 Dividir conta</button>
           <button class="suggestion-pill" onclick="openMonthClosingInChat()">📋 Resumo do mês</button>
@@ -654,6 +654,7 @@
     <div class="section-header"><h2 class="section-title" id="modal-bill-title">Nova Conta</h2><button class="icon-btn" onclick="closeModal('modal-bill')">✕</button></div>
     <form onsubmit="saveBillForm(event)">
       <input type="hidden" id="bill-edit-id" value="" />
+      <input type="hidden" id="bill-pending-msg-id" value="" />
       <div class="form-group"><label class="form-label">Nome (Conta ou Cartão)</label><input id="bill-name" class="form-control" type="text" placeholder="Ex: Fatura Nubank, Aluguel, Internet..." required /></div>
       <div class="form-group" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
         <div><label class="form-label">Valor (R$)</label><input id="bill-amount" class="form-control" type="number" step="0.01" min="0.01" required /></div>
@@ -838,7 +839,7 @@
     });
 
     const daysLeft = getDaysRemainingInMonth(getCurrentYearMonth());
-    const welcomeExtra = initCents > 0 ? `Você pode gastar até <strong>${formatBRL(Math.round(initCents / daysLeft), false)} por dia</strong> até o fim do mês.` : `Me conte seus ganhos ou gastos do dia!`;
+    const welcomeExtra = initCents > 0 ? `Você pode gastar até <strong>${formatBRL(Math.round(initCents / daysLeft), false)} por dia</strong> até o fim do mês.` : `Me conte seus ganhos, gastos ou contas que vão vencer!`;
     const newUser = {
       id: 'u_' + Date.now(), name, role, salaryCents, darkMode: false, largeText: false, hideBalances: false, soundEnabled: true,
       geminiApiKey: '', customAiPrompt: localStorage.getItem('pingou_custom_prompt') || '', learnedRules: [],
@@ -881,23 +882,12 @@
     memBox.innerHTML = count > 0 ? `${count} preferência(s) aprendida(s).` : `O Ping aprende automaticamente quando você corrige um lançamento.`;
   }
 
-  // ==================== RESUMO DE CONTEXTO LEVE PARA IA ====================
   function buildAiContextSummary() {
-    const u = currentUser();
-    const snap = getFinancialSnapshot(selectedMonth);
-    const nextYM = addMonthsYM(selectedMonth, 1);
-    const nextMonthCommitted = u.transactions
-      .filter(t => t.type === 'expense' && t.date.startsWith(nextYM))
-      .reduce((a, b) => a + b.amountCents, 0);
-
-    const openCardBills = u.bills
-      .filter(b => !b.paid && (b.category === 'Cartão de crédito' || normalizeStr(b.name).includes('cartao') || normalizeStr(b.name).includes('fatura')))
-      .reduce((a, b) => a + b.amountCents, 0);
-
+    const u = currentUser(), snap = getFinancialSnapshot(selectedMonth), nextYM = addMonthsYM(selectedMonth, 1);
+    const nextMonthCommitted = u.transactions.filter(t => t.type === 'expense' && t.date.startsWith(nextYM)).reduce((a, b) => a + b.amountCents, 0);
+    const openCardBills = u.bills.filter(b => !b.paid && (b.category === 'Cartão de crédito' || normalizeStr(b.name).includes('cartao') || normalizeStr(b.name).includes('fatura'))).reduce((a, b) => a + b.amountCents, 0);
     const gastosPorCat = {};
-    snap.monthTxs.filter(t => t.type === 'expense').forEach(t => {
-      gastosPorCat[t.category] = +(((gastosPorCat[t.category] || 0) * 100 + t.amountCents) / 100).toFixed(2);
-    });
+    snap.monthTxs.filter(t => t.type === 'expense').forEach(t => { gastosPorCat[t.category] = +(((gastosPorCat[t.category] || 0) * 100 + t.amountCents) / 100).toFixed(2); });
 
     return {
       mes_atual: selectedMonth,
@@ -915,7 +905,6 @@
     };
   }
 
-  // ==================== CHAMADA GEMINI ATUALIZADA ====================
   async function callGeminiAI(userMessage) {
     const u = currentUser();
     const regrasUsuario = u.customAiPrompt || localStorage.getItem('pingou_custom_prompt') || '';
@@ -930,37 +919,37 @@ Categorias válidas: ${categoriesList}
 REGRAS PERSONALIZADAS DO USUÁRIO:
 ${regrasUsuario || 'Nenhuma regra extra.'}
 
-APRENDIZADO DE CORREÇÕES ANTERIORES:
+APRENDIZADO:
 ${learnedText || 'Nenhum ainda.'}
 
 Extraia os dados da fala do usuário e retorne APENAS um JSON válido (sem markdown):
 {
-  "acao": "registrar" | "pagar_fatura" | "guardar_meta" | "dividir_despesa" | "consultar" | "corrigir_ultimo",
-  "resposta": "Mensagem curta, gentil e clara para o usuário em pt-BR",
+  "acao": "registrar" | "cadastrar_conta" | "pagar_fatura" | "guardar_meta" | "dividir_despesa" | "consultar" | "corrigir_ultimo",
+  "resposta": "Mensagem curta e gentil em pt-BR",
   "itens": [
     {
       "tipo": "entrada" | "saida",
-      "descricao": "Nome curto do gasto/ganho",
+      "descricao": "Nome curto",
       "valor": 0.00,
       "data": "YYYY-MM-DD",
       "pagamento": "pix_debito" | "cartao_credito",
       "parcelas": 1,
-      "categoria": "Uma das categorias válidas (para compras parceladas use a categoria do produto, nunca 'Cartão de crédito')"
+      "categoria": "Categoria válida"
     }
   ],
+  "conta": { "nome": "", "valor": 0.00, "dia_vencimento": 10, "categoria": "Categoria válida" },
   "meta": { "nome_meta": "", "valor": 0.00 },
   "divisao": { "descricao": "", "valor_total": 0.00, "pessoas": 2, "categoria": "Outros" },
   "correcao": { "novo_tipo": "entrada" | "saida" | null, "novo_valor": null }
 }
 
 Regras importantes:
-- Se o usuário falar que comprou no crédito ou parcelado (ex: "tênis 600 em 3x"), defina "pagamento": "cartao_credito", "parcelas": 3 e "categoria": "Compras / Vestuário" (ou a categoria do item).
-- Se o usuário falar "paguei a fatura do cartão", defina "acao": "pagar_fatura" para dar baixa sem duplicar.
-- Se o usuário falar "guardei X na meta Y", defina "acao": "guardar_meta" com "meta": { "nome_meta": "Y", "valor": X }.
-- Se o usuário falar "dividi uma conta de X em N pessoas", defina "acao": "dividir_despesa" com "divisao".
-- Para consultas ("quanto posso hoje?", "quanto já tenho comprometido para o mês que vem?", "resumo"), use os números exatos do CONTEXTO FINANCEIRO ATUAL abaixo e responda em "acao": "consultar".
-
-CONTEXTO FINANCEIRO ATUAL (JSON):
+- Se o usuário disser que uma conta/boleto/cartão VAI VENCER ou VENCE em um dia (ex: "cartão vence dia 30 - 400 reais", "luz 180 dia 25"), NÃO use "registrar"; use "acao": "cadastrar_conta" preenchendo "conta".
+- Se comprou parcelado no crédito ("tênis 600 em 3x"), use "acao": "registrar", "pagamento": "cartao_credito", "parcelas": 3 e a categoria do item.
+- Se disse "paguei a fatura do cartão", use "acao": "pagar_fatura".
+- Se disse "guardei X na meta Y", use "acao": "guardar_meta".
+- Se disse "dividi uma conta de X em N pessoas", use "acao": "dividir_despesa".
+- Para consultas, responda com os números exatos do CONTEXTO FINANCEIRO ATUAL:
 ${contextJson}`;
 
     const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${encodeURIComponent(u.geminiApiKey)}`, {
@@ -1021,7 +1010,7 @@ ${contextJson}`;
   }
   function showVoiceError(m) { document.getElementById('voice-ring').classList.remove('listening'); document.getElementById('voice-status').textContent = 'Indisponível'; document.getElementById('voice-error-msg').textContent = m; document.getElementById('voice-fallback-area').style.display = 'block'; }
 
-  // ==================== MOTOR DE REGRAS PERSONALIZADAS OFFLINE + NLP ====================
+  // ==================== MOTOR NLP CORRIGIDO (CONTAS A VENCER + \b NAS CATEGORIAS) ====================
   function applyCustomRulesOffline(rawText, defaultCat) {
     const u = currentUser();
     const rulesStr = u?.customAiPrompt || localStorage.getItem('pingou_custom_prompt') || '';
@@ -1031,8 +1020,7 @@ ${contextJson}`;
     for (const line of lines) {
       const lNorm = normalizeStr(line);
       for (const cat of Object.keys(CATEGORY_META)) {
-        const cNorm = normalizeStr(cat);
-        if (lNorm.includes(cNorm)) {
+        if (lNorm.includes(normalizeStr(cat))) {
           const quoted = line.match(/['"]([^'"]+)['"]/);
           if (quoted && normText.includes(normalizeStr(quoted[1]))) return cat;
         }
@@ -1056,7 +1044,13 @@ ${contextJson}`;
   function extractMoneySmart(rawText, hasParentActionVerb = false) {
     let norm = wordNumbersToDigitsExceptOne(normalizeStr(rawText));
     const qtyPattern = /\b\d+\s*(perfumes?|produtos?|unidades?|pecas?|caixas?|itens?|cremes?|hidratantes?|hidrantes?|dias?|meses|anos|pessoas?|vezes)\b/gi;
-    const withoutQty = norm.replace(qtyPattern, ' ').replace(/\b\d{1,2}\s*x\b/gi, ' ').replace(/R\$/gi, 'R$ ');
+    // Remove "dia 30", "vence dia 30", "todo dia 10" para nunca confundir dia do mês com R$!
+    const withoutQty = norm
+      .replace(/(?:vence|vencimento|todo|no)?\s*\bdia\s*\d{1,2}\b/gi, ' ')
+      .replace(qtyPattern, ' ')
+      .replace(/\b\d{1,2}\s*x\b/gi, ' ')
+      .replace(/R\$/gi, 'R$ ');
+
     let match = withoutQty.match(/r\$\s*(\d+(?:[.,]\d{1,2})?)/i)
              || withoutQty.match(/(\d+(?:[.,]\d{1,2})?)\s*(?:reais|real|conto|contos|pila)\b/i)
              || withoutQty.match(/(?:gastei|gastamos|paguei|pagamos|comprei|compramos|torrei|torramos|recebi|recebemos|faturei|faturamos|lucrei|lucramos|lucro|ganhei|entrou|foi|valor|guardei|coloquei|dividi)\s*(?:de\s*)?(\d+(?:[.,]\d{1,2})?)\b/i);
@@ -1065,6 +1059,7 @@ ${contextJson}`;
     const cents = toCentsExact(match[1]);
     return cents > 0 ? cents : null;
   }
+
   function extractCleanItemDescription(clause) {
     let d = clause.trim()
       .replace(/\b(?:gastei|gastamos|paguei|pagamos|comprei|compramos|torrei|torramos|recebi|recebemos|vendi|vendemos|faturei|faturamos|lucrei|lucramos)\b/gi, ' ')
@@ -1073,15 +1068,30 @@ ${contextJson}`;
       .replace(/\bem\s+(?:cada|casa)\s*(?:um|uma)?\b/gi, ' ')
       .replace(/\b(?:no\s+credito|no\s+debito|no\s+pix|em\s+\d{1,2}x)\b/gi, ' ')
       .replace(/\s+/g, ' ').trim()
-      .replace(/^(?:de|do|da|dos|das|no|na|nos|nas|em|com|por|para|pro|pra)\s+/i, '')
-      .replace(/\s+(?:de|do|da|em|no|na)$/i, '').trim();
+      .replace(/^(?:de|do|da|dos|das|no|na|nos|nas|em|com|por|para|pro|pra|-)\s+/i, '')
+      .replace(/\s+(?:de|do|da|em|no|na|-)$/i, '').trim();
     if (!d || d.length < 2) return '';
     return d.charAt(0).toUpperCase() + d.slice(1);
   }
+
+  // Extrai nome limpo de conta a vencer ("cartão vence dia 30 - 400 reais" -> "Cartão")
+  function extractCleanBillName(rawText) {
+    let d = rawText.trim()
+      .replace(/\b(?:tenho\s+que\s+pagar|vai\s+vencer|vence\s+em|vence|vencimento|a\s+vencer|todo\s+dia|no\s+dia|dia|lembrar\s+de|agendar|conta\s+fixa|conta\s+de|boleto\s+de)\b/gi, ' ')
+      .replace(/\b\d{1,2}\b/g, (m, offset, str) => m) // mantemos limpeza de dinheiro abaixo
+      .replace(/\b(?:r\$\s*)?\d+(?:[.,]\d{1,2})?\s*(?:reais|real|conto|contos|pila)?\b/gi, ' ')
+      .replace(/[-–—,:]/g, ' ')
+      .replace(/\s+/g, ' ').trim()
+      .replace(/^(?:de|do|da|o|a|um|uma)\s+/i, '')
+      .replace(/\s+(?:de|do|da)$/i, '').trim();
+    if (!d || d.length < 2) return 'Conta a pagar';
+    return d.charAt(0).toUpperCase() + d.slice(1);
+  }
+
   function inferMetaFromText(fullText) {
     const t = normalizeStr(fullText);
     const isIncome = /\b(vendi|vendemos|venda|vendas|faturei|faturamos|lucro|lucrei|lucramos|recebi|recebemos|caiu|pingou|ganhei|entrou|cobrei|freela|salario|vale)\b/.test(t)
-                  && !/\b(gastei|gastamos|paguei|pagamos|comprei|compramos|torrei|torramos|no credito)\b/.test(t);
+                  && !/\b(gastei|gastamos|paguei|pagamos|comprei|compramos|torrei|torramos|no credito|vence)\b/.test(t);
     const isCredit = /\b(credito|parcela)\b|\b\d{1,2}x\b/.test(t);
     const instMatch = t.match(/(?:em\s*)?(\d{1,2})\s*(?:x|vezes)/);
     const installments = (isCredit && instMatch) ? Math.min(12, Math.max(1, parseInt(instMatch[1], 10))) : 1;
@@ -1089,41 +1099,51 @@ ${contextJson}`;
     let category = isIncome ? 'PIX Recebidos' : 'Outros';
     if (isIncome) {
       if (/\b(vendi|vendemos|venda|vendas|faturei|faturamos|lucro|lucrei|boticario|natura|produto|loja|cliente)\b/.test(t)) category = 'Vendas / Comissões';
-      else if (t.includes('salario')) category = 'Salário';
-      else if (t.includes('trabalho') || t.includes('negocio') || t.includes('freela')) category = 'Trabalho / Negócios ';
-      else if (t.includes('reserva') || t.includes('investimento') || t.includes('rendeu')) category = 'Investimentos / Reservas ';
+      else if (/\bsalario\b/.test(t)) category = 'Salário';
+      else if (/\b(trabalho|negocio|freela)\b/.test(t)) category = 'Trabalho / Negócios ';
+      else if (/\b(reserva|investimento|rendeu)\b/.test(t)) category = 'Investimentos / Reservas ';
     } else {
-      if (/cartao|fatura|nubank|itau|inter|bradesco|santander/.test(t) && !isCredit) category = 'Cartão de crédito';
-      else if (/moradia|aluguel|condominio|energia|luz|agua|internet|wifi|gas|casa|mercado|supermercado|feira|padaria/.test(t)) category = 'Moradia';
-      else if (/transporte|gasolina|etanol|diesel|combustivel|posto|uber|99|onibus|metro|passagem|pedagio|estacionamento/.test(t)) category = 'Transporte';
-      else if (/saude|farmacia|remedio|medico|consulta|dentista|exame|hospital|psicologo/.test(t)) category = 'Saúde';
-      else if (/academia|esporte|natacao|futebol|pilates|crossfit|suplemento/.test(t)) category = 'Academia / Esportes';
-      else if (/educacao|escola|faculdade|curso|livro|mensalidade|aula/.test(t)) category = 'Educação';
-      else if (/compras|compra|vestuario|roupa|tenis|sapato|camisa|calca|vestido|shopping|almoco|jantar|lanche|bar|restaurante/.test(t)) category = 'Compras / Vestuário';
-      else if (/beleza|cuidados|salao|cabelo|manicure|unha|maquiagem|perfume|creme|hidratante|barbeiro/.test(t)) category = 'Cuidados Pessoais / Beleza';
-      else if (/pet|pets|cachorro|gato|racao|veterinario|petshop/.test(t)) category = 'Pets';
-      else if (/viagem|viagens|hotel|pousada|passeio|turismo/.test(t)) category = 'Viagens';
-      else if (/imposto|impostos|taxa|taxas|das|mei|iptu|ipva|irpf|multa/.test(t)) category = 'Impostos e Taxas';
-      else if (/divida|dividas|emprestimo|emprestimos|financiamento|acordo/.test(t)) category = 'Dívidas e Empréstimos';
-      else if (/investimento|investimentos|reserva|poupanca|cdb|tesouro|guardar/.test(t)) category = 'Investimentos / Reservas';
-      else if (/familia|filho|filhos|filha|crianca|fralda|mesada/.test(t)) category = 'Família / Filhos';
-      else if (/trabalho|negocio|negocios|estoque|escritorio|ferramenta/.test(t)) category = 'Trabalho / Negócios';
-      else if (/doacao|doacoes|presente|presentes|lembrancinha|aniversario|igreja|caridade/.test(t)) category = 'Doações e Presentes';
-      else if (/seguro|seguros/.test(t)) category = 'Seguros';
+      // TODAS as palavras curtas protegidas com \b para "gasolina" NUNCA casar com "gas"!
+      if (/\b(cartao|fatura|nubank|itau|inter|bradesco|santander)\b/.test(t) && !isCredit) category = 'Cartão de crédito';
+      else if (/\b(transporte|gasolina|etanol|diesel|combustivel|posto|uber|99|onibus|metro|passagem|pedagio|estacionamento)\b/.test(t)) category = 'Transporte';
+      else if (/\b(moradia|aluguel|condominio|energia|luz|agua|internet|wifi|gas|botijao|casa|mercado|supermercado|feira|padaria)\b/.test(t)) category = 'Moradia';
+      else if (/\b(saude|farmacia|remedio|medico|consulta|dentista|exame|hospital|psicologo)\b/.test(t)) category = 'Saúde';
+      else if (/\b(academia|esporte|esportes|natacao|futebol|pilates|crossfit|suplemento)\b/.test(t)) category = 'Academia / Esportes';
+      else if (/\b(educacao|escola|faculdade|curso|livro|livros|mensalidade|aula)\b/.test(t)) category = 'Educação';
+      else if (/\b(compras|compra|vestuario|roupa|roupas|tenis|sapato|camisa|calca|vestido|shopping|almoco|jantar|lanche|bar|restaurante)\b/.test(t)) category = 'Compras / Vestuário';
+      else if (/\b(beleza|cuidados|salao|cabelo|manicure|unha|maquiagem|perfume|creme|hidratante|hidrante|barbeiro)\b/.test(t)) category = 'Cuidados Pessoais / Beleza';
+      else if (/\b(pet|pets|cachorro|gato|racao|veterinario|petshop)\b/.test(t)) category = 'Pets';
+      else if (/\b(viagem|viagens|hotel|pousada|passeio|turismo)\b/.test(t)) category = 'Viagens';
+      else if (/\b(imposto|impostos|taxa|taxas|das|mei|iptu|ipva|irpf|multa)\b/.test(t)) category = 'Impostos e Taxas';
+      else if (/\b(divida|dividas|emprestimo|emprestimos|financiamento|acordo)\b/.test(t)) category = 'Dívidas e Empréstimos';
+      else if (/\b(investimento|investimentos|reserva|poupanca|cdb|tesouro|guardar)\b/.test(t)) category = 'Investimentos / Reservas';
+      else if (/\b(familia|filho|filhos|filha|crianca|fralda|mesada)\b/.test(t)) category = 'Família / Filhos';
+      else if (/\b(trabalho|negocio|negocios|estoque|escritorio|ferramenta)\b/.test(t)) category = 'Trabalho / Negócios';
+      else if (/\b(doacao|doacoes|presente|presentes|lembrancinha|aniversario|igreja|caridade)\b/.test(t)) category = 'Doações e Presentes';
+      else if (/\b(seguro|seguros)\b/.test(t)) category = 'Seguros';
     }
     category = applyCustomRulesOffline(fullText, category);
     return { isIncome, isCredit, installments, category };
   }
 
-  // ==================== PROCESSAMENTO PRINCIPAL DA IA (COM CONFIRMAÇÃO + METAS + DIVISÃO + FATURA) ====================
+  // ==================== PROCESSAMENTO PRINCIPAL ====================
   async function processPingAI(rawText) {
     const u = currentUser(); if (!u) return;
     const today = new Date().toISOString().split('T')[0];
 
-    // 1. Se tiver chave Gemini configurada
     if (u.geminiApiKey) {
       try {
         const ai = await callGeminiAI(rawText);
+        if (ai.acao === 'cadastrar_conta' && ai.conta) {
+          const billDraft = {
+            name: ai.conta.nome || 'Conta a pagar',
+            amountCents: Math.max(0, toCentsExact(ai.conta.valor)),
+            dueDay: Math.min(31, Math.max(1, parseInt(ai.conta.dia_vencimento || 10, 10))),
+            category: CATEGORY_META[ai.conta.categoria] ? ai.conta.categoria : 'Outros'
+          };
+          pushMessage('ping', ai.resposta || 'Quer salvar esta conta na aba Contas para eu te lembrar no vencimento?', { kind: 'confirm_bill_create', billDraft, status: 'pending' });
+          return;
+        }
         if (ai.acao === 'registrar' && Array.isArray(ai.itens) && ai.itens.length > 0) {
           const drafts = ai.itens.map(item => ({
             type: item.tipo === 'entrada' ? 'income' : 'expense',
@@ -1137,18 +1157,9 @@ ${contextJson}`;
           pushMessage('ping', ai.resposta || 'Confirma se entendi certinho?', { kind: 'confirm_tx_list', drafts, status: 'pending' });
           return;
         }
-        if (ai.acao === 'guardar_meta' && ai.meta?.valor > 0) {
-          handleGoalAiIntent(ai.meta.nome_meta, toCentsExact(ai.meta.valor), ai.resposta);
-          return;
-        }
-        if (ai.acao === 'dividir_despesa' && ai.divisao?.valor_total > 0) {
-          handleSplitAiIntent(ai.divisao.descricao || 'Conta dividida', toCentsExact(ai.divisao.valor_total), Math.max(2, ai.divisao.pessoas || 2), ai.divisao.categoria || 'Outros');
-          return;
-        }
-        if (ai.acao === 'pagar_fatura') {
-          handlePayInvoiceAiIntent(ai.resposta);
-          return;
-        }
+        if (ai.acao === 'guardar_meta' && ai.meta?.valor > 0) { handleGoalAiIntent(ai.meta.nome_meta, toCentsExact(ai.meta.valor), ai.resposta); return; }
+        if (ai.acao === 'dividir_despesa' && ai.divisao?.valor_total > 0) { handleSplitAiIntent(ai.divisao.descricao || 'Conta dividida', toCentsExact(ai.divisao.valor_total), Math.max(2, ai.divisao.pessoas || 2), ai.divisao.categoria || 'Outros'); return; }
+        if (ai.acao === 'pagar_fatura') { handlePayInvoiceAiIntent(ai.resposta); return; }
         if (ai.acao === 'corrigir_ultimo' && u.lastChatTxId && ai.correcao) {
           const lastTx = u.transactions.find(t => t.id === u.lastChatTxId);
           if (lastTx) {
@@ -1156,23 +1167,16 @@ ${contextJson}`;
             if (ai.correcao.novo_valor) lastTx.amountCents = toCentsExact(ai.correcao.novo_valor);
             u.learnedRules = u.learnedRules || []; u.learnedRules.push({ phrase: lastTx.desc, correction: ai.resposta });
             saveStore(); renderAll(); updateAIModeUI();
-            pushMessage('ping', ai.resposta, { kind: 'tx_saved', tx: lastTx });
-            return;
+            pushMessage('ping', ai.resposta, { kind: 'tx_saved', tx: lastTx }); return;
           }
         }
-        if (ai.acao === 'consultar' && ai.resposta) {
-          pushMessage('ping', ai.resposta);
-          return;
-        }
-      } catch (err) {
-        console.warn('Fallback para motor local:', err);
-      }
+        if (ai.acao === 'consultar' && ai.resposta) { pushMessage('ping', ai.resposta); return; }
+      } catch (err) { console.warn('Fallback local:', err); }
     }
 
-    // 2. MOTOR LOCAL INTELIGENTE (Offline / Sem Chave)
     const text = normalizeStr(rawText);
 
-    // 2A. Pendência aguardando valor
+    // 2A. Pendência aguardando valor de transação ou conta
     if (u.chatPending && u.chatPending.type === 'complete_tx_amount') {
       let cents = extractMoneySmart(rawText, true);
       if (cents) {
@@ -1182,42 +1186,67 @@ ${contextJson}`;
         pushMessage('ping', 'Confirma o lançamento abaixo?', { kind: 'confirm_tx_list', drafts: [{ ...draft, amountCents: cents, date: today }], status: 'pending' });
         return;
       }
-      pushMessage('ping', 'Digite só o valor em reais (ex: <strong>70</strong>).');
+      pushMessage('ping', 'Digite só o valor em reais (ex: <strong>70</strong>).'); return;
+    }
+
+    if (u.chatPending && u.chatPending.type === 'complete_bill_amount') {
+      const cents = extractMoneySmart(rawText, true);
+      if (cents) {
+        const billDraft = { ...u.chatPending.billDraft, amountCents: cents };
+        u.chatPending = null; saveStore();
+        pushMessage('ping', 'Confirma salvar esta conta para eu te avisar no vencimento?', { kind: 'confirm_bill_create', billDraft, status: 'pending' });
+        return;
+      }
+      pushMessage('ping', 'Qual é o valor dessa conta em reais? (Ex: <strong>400</strong>)'); return;
+    }
+
+    // 2B. NOVO: Detectar CONTA A VENCER ("cartão vence dia 30 - 400 reais", "luz dia 15 de 180", "todo dia 10 internet 100")
+    const isUpcomingBill = /\b(vence|vencimento|vai vencer|a vencer|todo dia|agendar|lembrar|boleto)\b/i.test(text)
+                        || (/\bdia\s+\d{1,2}\b/i.test(text) && !/\b(gastei|paguei|comprei|recebi|vendi)\b/i.test(text));
+    if (isUpcomingBill && !/\b(paguei|ja paguei)\b/i.test(text)) {
+      const dayMatch = text.match(/(?:vence|vencimento|todo|no)?\s*\bdia\s*(\d{1,2})\b/i);
+      const dueDay = dayMatch ? Math.min(31, Math.max(1, parseInt(dayMatch[1], 10))) : 10;
+      const billAmount = extractMoneySmart(rawText, true);
+      const billName = extractCleanBillName(rawText.replace(/(?:vence|vencimento|todo|no)?\s*\bdia\s*\d{1,2}\b/gi, ' '));
+      const cat = inferMetaFromText(rawText).category;
+
+      const billDraft = { name: billName, amountCents: billAmount || 0, dueDay, category: cat === 'Outros' && text.includes('cartao') ? 'Cartão de crédito' : cat };
+      if (!billAmount) {
+        u.chatPending = { type: 'complete_bill_amount', billDraft };
+        saveStore();
+        pushMessage('ping', `Beleza! Anotei <strong>${billName}</strong> vencendo todo dia <strong>${dueDay}</strong>. Qual é o valor dessa conta?`);
+        return;
+      }
+      pushMessage('ping', `Entendi! Essa conta ainda vai vencer — quer salvar na aba <strong>Contas</strong> para eu te lembrar?`, { kind: 'confirm_bill_create', billDraft, status: 'pending' });
       return;
     }
 
-    // 2B. Dividir despesa ("Dividi uma conta de 120 reais em 3 pessoas no bar")
+    // 2C. Dividir despesa
     if (/\b(dividi|dividir|rachar|rachei)\b/.test(text)) {
-      const totalCents = extractMoneySmart(rawText, true);
-      const pplMatch = text.match(/(\d+)\s*pessoas?/);
+      const totalCents = extractMoneySmart(rawText, true), pplMatch = text.match(/(\d+)\s*pessoas?/);
       const people = pplMatch ? Math.max(2, parseInt(pplMatch[1], 10)) : 2;
       if (totalCents) {
         const desc = extractCleanItemDescription(rawText).replace(/\b\d+\s*pessoas?\b/gi, '').trim() || 'Conta dividida';
-        const cat = inferMetaFromText(rawText).category;
-        handleSplitAiIntent(desc, totalCents, people, cat);
+        handleSplitAiIntent(desc, totalCents, people, inferMetaFromText(rawText).category);
         return;
       }
     }
 
-    // 2C. Guardar em Meta ("Guardei 200 reais na meta da viagem")
+    // 2D. Guardar em Meta
     if (/\b(guardei|guardar|coloquei|depositei)\b.*\b(meta|reserva|viagem|carro|sonho)\b/.test(text)) {
       const cents = extractMoneySmart(rawText, true);
-      if (cents) {
-        handleGoalAiIntent(rawText, cents, null);
-        return;
-      }
+      if (cents) { handleGoalAiIntent(rawText, cents, null); return; }
     }
 
-    // 2D. Pagar Fatura do Cartão ("Paguei a fatura do cartão")
+    // 2E. Pagar Fatura
     if (/\b(paguei|pagar|baixar)\b.*\b(fatura|cartao)\b/.test(text) && !extractMoneySmart(rawText, false)) {
-      handlePayInvoiceAiIntent(null);
-      return;
+      handlePayInvoiceAiIntent(null); return;
     }
 
-    // 2E. Consultas de Próximo Mês & Saldo
+    // 2F. Consultas
     if (text.includes('mes que vem') || text.includes('proximo mes') || text.includes('comprometido') || text.includes('parcelas')) {
       const ctx = buildAiContextSummary();
-      pushMessage('ping', `Para o próximo mês, você já tem <strong>${formatBRL(Math.round(ctx.parcelas_proximo_mes * 100), false)}</strong> comprometidos em lançamentos/parcelas futuras.\n\n• Contas fixas abertas hoje: <strong>${formatBRL(Math.round(ctx.contas_abertas * 100), false)}</strong>\n• Livre neste mês: <strong>${formatBRL(Math.round(ctx.livre_no_mes * 100), false)}</strong>`);
+      pushMessage('ping', `Para o próximo mês, você já tem <strong>${formatBRL(Math.round(ctx.parcelas_proximo_mes * 100), false)}</strong> comprometidos.\n\n• Contas abertas hoje: <strong>${formatBRL(Math.round(ctx.contas_abertas * 100), false)}</strong>\n• Livre neste mês: <strong>${formatBRL(Math.round(ctx.livre_no_mes * 100), false)}</strong>`);
       return;
     }
     if (text.includes('fechar mes') || text.includes('resumo do mes')) { generateMonthSummaryMessage(selectedMonth, false); return; }
@@ -1227,7 +1256,7 @@ ${contextJson}`;
       return;
     }
 
-    // 2F. Correções do último lançamento confirmado
+    // 2G. Correção do último lançamento
     const wantsFlipToIncome = /(esse|este|esse valor|isso).*(entrou|entrada|ganho|receita|lucro)/.test(text) || /entrou\s*(?:e\s*)?nao\s*saiu|nao\s*saiu.*entrou|era\s*entrada/.test(text);
     const wantsFlipToExpense = /(esse|este|esse valor|isso).*(saiu|despesa|gasto)/.test(text) || /saiu\s*(?:e\s*)?nao\s*entrou/.test(text);
     const wantsDeleteLast = /\b(apaga|apagar|exclui|excluir|desfaz|cancela)\b/.test(text) && text.length < 40;
@@ -1249,7 +1278,7 @@ ${contextJson}`;
       }
     }
 
-    // 2G. Extração de 1 ou múltiplos lançamentos -> Card de Confirmação Rápida!
+    // 2H. Extração de transações -> Card de Confirmação
     const globalMeta = inferMetaFromText(rawText), hasGlobalVerb = ACTION_VERBS_REGEX.test(text);
     const step1Chunks = rawText
       .replace(/^(chat|ping|oi|ola|ei)\s*[,:]\s*/i, '')
@@ -1315,155 +1344,99 @@ ${contextJson}`;
       return;
     }
 
-    pushMessage('ping', 'Diga o que entrou ou saiu junto com o valor (ex: "45 no almoço", "guardei 200 na meta viagem", "dividi 120 em 3 pessoas").');
+    pushMessage('ping', 'Você pode falar gastos ("80 de gasolina"), contas que vão vencer ("cartão vence dia 30 - 400 reais"), ou metas ("guardei 200 na reserva").');
   }
 
-  // ==================== HANDLERS DAS NOVAS AÇÕES DE IA (CONFIRMAR, METAS, DIVISÃO, FATURA) ====================
+  // ==================== HANDLERS DE CONFIRMAÇÃO (CONTA A VENCER, TRANSAÇÕES, METAS, DIVISÃO) ====================
+  function confirmBillCreateCard(msgId) {
+    const u = currentUser(), m = u.messages.find(x => x.id === msgId);
+    if (!m || !m.card || m.card.status !== 'pending') return;
+    const b = m.card.billDraft;
+    const createdBill = { id: 'b_' + Date.now(), name: b.name, amountCents: b.amountCents, dueDay: b.dueDay, category: b.category, paid: false };
+    u.bills.push(createdBill);
+    m.card.status = 'confirmed';
+    m.card.createdBillId = createdBill.id;
+    saveStore(); renderAll();
+    showToast(`"${b.name}" salva em Contas (Dia ${b.dueDay})! 📅`, '✅');
+  }
+
+  function editBillDraftCard(msgId) {
+    const u = currentUser(), m = u.messages.find(x => x.id === msgId);
+    if (!m || !m.card || !m.card.billDraft) return;
+    const b = m.card.billDraft;
+    populateBillCategories();
+    document.getElementById('bill-edit-id').value = '';
+    document.getElementById('bill-pending-msg-id').value = msgId;
+    document.getElementById('modal-bill-title').textContent = 'Revisar Conta a Vencer';
+    document.getElementById('bill-name').value = b.name;
+    document.getElementById('bill-amount').value = b.amountCents ? (b.amountCents / 100).toFixed(2) : '';
+    document.getElementById('bill-day').value = b.dueDay;
+    document.getElementById('bill-cat').value = CATEGORY_META[b.category] ? b.category : 'Outros';
+    document.getElementById('btn-delete-bill-modal').style.display = 'none';
+    openModal('modal-bill');
+  }
+
   function confirmDraftCard(msgId) {
     const u = currentUser(), m = u.messages.find(x => x.id === msgId);
     if (!m || !m.card || m.card.status !== 'pending') return;
     const created = [];
     m.card.drafts.forEach(d => {
       if (d.installments > 1 && d.type === 'expense') {
-        const part = Math.round(d.amountCents / d.installments);
-        const [y, mo, da] = d.date.split('-');
-        for (let i = 0; i < d.installments; i++) {
-          created.push(addSimpleTx({ type: 'expense', category: d.category, desc: `${d.desc} (${i+1}/${d.installments})`, amountCents: part, date: `${addMonthsYM(`${y}-${mo}`, i)}-${da}` }));
-        }
+        const part = Math.round(d.amountCents / d.installments), [y, mo, da] = d.date.split('-');
+        for (let i = 0; i < d.installments; i++) created.push(addSimpleTx({ type: 'expense', category: d.category, desc: `${d.desc} (${i+1}/${d.installments})`, amountCents: part, date: `${addMonthsYM(`${y}-${mo}`, i)}-${da}` }));
       } else {
         created.push(addSimpleTx({ type: d.type, category: d.category, desc: d.desc, amountCents: d.amountCents, date: d.date }));
       }
     });
-    m.card.status = 'confirmed';
-    m.card.createdIds = created.map(t => t.id);
+    m.card.status = 'confirmed'; m.card.createdIds = created.map(t => t.id);
     saveStore(); renderAll();
     if (created.some(t => t.type === 'income')) { playPingSound(); launchConfetti(); }
     showToast('Lançamento confirmado! ✅', '✅');
   }
 
-  function cancelDraftCard(msgId) {
-    const u = currentUser(), m = u.messages.find(x => x.id === msgId);
-    if (!m || !m.card) return;
-    m.card.status = 'canceled';
-    saveStore(); renderChat();
-    showToast('Rascunho descartado.', '↩️');
-  }
+  function cancelDraftCard(msgId) { const u = currentUser(), m = u.messages.find(x => x.id === msgId); if (!m?.card) return; m.card.status = 'canceled'; saveStore(); renderChat(); showToast('Cancelado.', '↩️'); }
 
   function editDraftCard(msgId) {
-    const u = currentUser(), m = u.messages.find(x => x.id === msgId);
-    if (!m || !m.card || !m.card.drafts?.length) return;
+    const u = currentUser(), m = u.messages.find(x => x.id === msgId); if (!m?.card?.drafts?.length) return;
     const d = m.card.drafts[0];
-    document.getElementById('tx-edit-id').value = '';
-    document.getElementById('tx-pending-msg-id').value = msgId;
+    document.getElementById('tx-edit-id').value = ''; document.getElementById('tx-pending-msg-id').value = msgId;
     document.getElementById('modal-tx-title').textContent = 'Revisar antes de salvar';
     setTxFormType(d.type);
-    document.getElementById('tx-desc').value = d.desc;
-    document.getElementById('tx-amount').value = (d.amountCents / 100).toFixed(2);
+    document.getElementById('tx-desc').value = d.desc; document.getElementById('tx-amount').value = (d.amountCents/100).toFixed(2);
     document.getElementById('tx-date').value = d.date;
     document.getElementById('tx-category').value = CATEGORY_META[d.category] ? d.category : (d.type === 'income' ? 'PIX Recebidos' : 'Outros');
     document.getElementById('btn-delete-tx-modal').style.display = 'none';
     openModal('modal-tx');
   }
 
-  function undoConfirmedDraftCard(msgId) {
-    const u = currentUser(), m = u.messages.find(x => x.id === msgId);
-    if (!m || !m.card || !m.card.createdIds) return;
-    u.transactions = u.transactions.filter(t => !m.card.createdIds.includes(t.id));
-    m.card.status = 'canceled';
-    saveStore(); renderAll(); showToast('Lançamento desfeito!', '↩️');
-  }
+  function undoConfirmedDraftCard(msgId) { const u = currentUser(), m = u.messages.find(x => x.id === msgId); if (!m?.card?.createdIds) return; u.transactions = u.transactions.filter(t => !m.card.createdIds.includes(t.id)); m.card.status = 'canceled'; saveStore(); renderAll(); showToast('Desfeito!', '↩️'); }
 
   function handleGoalAiIntent(queryName, amountCents, customReply) {
     const u = currentUser();
-    if (u.goals.length === 0) {
-      pushMessage('ping', `Você ainda não tem uma meta criada! Quer criar uma agora com esses <strong>${formatBRL(amountCents, false)}</strong>?`, { kind: 'create_goal_prompt', amountCents });
-      return;
-    }
-    const qNorm = normalizeStr(queryName || '');
-    const matched = u.goals.find(g => qNorm.includes(normalizeStr(g.name.split(' ')[0]))) || u.goals[0];
-    pushMessage('ping', customReply || `Confirma guardar <strong>${formatBRL(amountCents, false)}</strong> na meta <strong>"${matched.name}"</strong>?`, {
-      kind: 'confirm_goal_deposit', goalId: matched.id, goalName: matched.name, amountCents, status: 'pending'
-    });
+    if (u.goals.length === 0) { pushMessage('ping', `Você ainda não tem uma meta criada! Quer criar uma com esses <strong>${formatBRL(amountCents, false)}</strong>?`, { kind: 'create_goal_prompt', amountCents }); return; }
+    const qNorm = normalizeStr(queryName || ''), matched = u.goals.find(g => qNorm.includes(normalizeStr(g.name.split(' ')[0]))) || u.goals[0];
+    pushMessage('ping', customReply || `Confirma guardar <strong>${formatBRL(amountCents, false)}</strong> na meta <strong>"${matched.name}"</strong>?`, { kind: 'confirm_goal_deposit', goalId: matched.id, goalName: matched.name, amountCents, status: 'pending' });
   }
-
-  function confirmGoalDepositFromChat(msgId) {
-    const u = currentUser(), m = u.messages.find(x => x.id === msgId);
-    if (!m || !m.card || m.card.status !== 'pending') return;
-    const g = u.goals.find(x => x.id === m.card.goalId);
-    if (!g) return;
-    g.currentCents += m.card.amountCents;
-    m.card.status = 'confirmed';
-    saveStore(); playPingSound(); launchConfetti(); renderAll();
-    showToast(`Guardado em "${g.name}"! 🐷`, '🎉');
-  }
-
-  function handleSplitAiIntent(desc, totalCents, people, category) {
-    const myShareCents = Math.round(totalCents / people);
-    pushMessage('ping', `Conta de <strong>${formatBRL(totalCents, false)}</strong> dividida por <strong>${people} pessoas</strong> = <strong>${formatBRL(myShareCents, false)}</strong> para cada.`, {
-      kind: 'split_action', desc, totalCents, people, myShareCents, category, saved: false
-    });
-  }
-
-  function registerMySplitShare(msgId) {
-    const u = currentUser(), m = u.messages.find(x => x.id === msgId);
-    if (!m || !m.card || m.card.saved) return;
-    addSimpleTx({ type: 'expense', category: m.card.category, desc: `${m.card.desc} (1/${m.card.people})`, amountCents: m.card.myShareCents, date: new Date().toISOString().split('T')[0] });
-    m.card.saved = true; saveStore(); renderAll();
-    showToast(`Sua parte (${formatBRL(m.card.myShareCents, false)}) registrada!`, '✅');
-  }
-
-  function openSplitFromChat(desc, totalCents, people) {
-    currentSplitTx = { desc, amountCents: totalCents };
-    document.getElementById('split-tx-info').textContent = `${desc} — ${formatBRL(totalCents, false)}`;
-    calcSplit(people);
-    openModal('modal-split');
-  }
-
-  function handlePayInvoiceAiIntent(customReply) {
-    const u = currentUser();
-    const cardBill = u.bills.find(b => !b.paid && (b.category === 'Cartão de crédito' || normalizeStr(b.name).includes('cartao') || normalizeStr(b.name).includes('fatura')));
-    if (!cardBill) {
-      pushMessage('ping', 'Não encontrei nenhuma fatura de cartão em aberto na aba <strong>Contas</strong>. Quer cadastrar ou lançar manualmente?');
-      return;
-    }
-    pushMessage('ping', customReply || `Encontrei sua fatura em aberto na aba Contas. Confirmar pagamento?`, {
-      kind: 'confirm_bill_pay', billId: cardBill.id, billName: cardBill.name, amountCents: cardBill.amountCents, status: 'pending'
-    });
-  }
-
-  function confirmBillPayFromChat(msgId) {
-    const u = currentUser(), m = u.messages.find(x => x.id === msgId);
-    if (!m || !m.card || m.card.status !== 'pending') return;
-    payBill(m.card.billId);
-    m.card.status = 'confirmed';
-    saveStore(); renderChat();
-  }
+  function confirmGoalDepositFromChat(msgId) { const u = currentUser(), m = u.messages.find(x => x.id === msgId); if (!m?.card || m.card.status !== 'pending') return; const g = u.goals.find(x => x.id === m.card.goalId); if (!g) return; g.currentCents += m.card.amountCents; m.card.status = 'confirmed'; saveStore(); playPingSound(); launchConfetti(); renderAll(); showToast(`Guardado em "${g.name}"! 🐷`, '🎉'); }
+  function handleSplitAiIntent(desc, totalCents, people, category) { const myShareCents = Math.round(totalCents / people); pushMessage('ping', `Conta de <strong>${formatBRL(totalCents, false)}</strong> dividida por <strong>${people} pessoas</strong> = <strong>${formatBRL(myShareCents, false)}</strong> para cada.`, { kind: 'split_action', desc, totalCents, people, myShareCents, category, saved: false }); }
+  function registerMySplitShare(msgId) { const u = currentUser(), m = u.messages.find(x => x.id === msgId); if (!m?.card || m.card.saved) return; addSimpleTx({ type: 'expense', category: m.card.category, desc: `${m.card.desc} (1/${m.card.people})`, amountCents: m.card.myShareCents, date: new Date().toISOString().split('T')[0] }); m.card.saved = true; saveStore(); renderAll(); showToast(`Sua parte registrada!`, '✅'); }
+  function openSplitFromChat(desc, totalCents, people) { currentSplitTx = { desc, amountCents: totalCents }; document.getElementById('split-tx-info').textContent = `${desc} — ${formatBRL(totalCents, false)}`; calcSplit(people); openModal('modal-split'); }
+  function handlePayInvoiceAiIntent(customReply) { const u = currentUser(), cb = u.bills.find(b => !b.paid && (b.category === 'Cartão de crédito' || normalizeStr(b.name).includes('cartao') || normalizeStr(b.name).includes('fatura'))); if (!cb) { pushMessage('ping', 'Não encontrei fatura em aberto na aba <strong>Contas</strong>.'); return; } pushMessage('ping', customReply || `Encontrei sua fatura em aberto. Confirmar pagamento?`, { kind: 'confirm_bill_pay', billId: cb.id, billName: cb.name, amountCents: cb.amountCents, status: 'pending' }); }
+  function confirmBillPayFromChat(msgId) { const u = currentUser(), m = u.messages.find(x => x.id === msgId); if (!m?.card || m.card.status !== 'pending') return; payBill(m.card.billId); m.card.status = 'confirmed'; saveStore(); renderChat(); }
 
   // ==================== CÁLCULOS & RENDERIZAÇÃO ====================
   function getDaysRemainingInMonth(ym) { const now = new Date(), [y, m] = ym.split('-').map(Number), lastDay = new Date(y, m, 0).getDate(); return ym === getCurrentYearMonth() ? Math.max(1, lastDay - now.getDate() + 1) : lastDay; }
 
   function getFinancialSnapshot(ym = selectedMonth) {
     const u = currentUser(); if (!u) return { cashBalance: 0, pendingBills: 0, freeMonth: 0, dailySafe: 0, daysLeft: 1, monthIncome: 0, monthExpense: 0, monthTxs: [], nextMonthCommitted: 0 };
-    let totalIn = 0, totalOut = 0;
-    const todayStr = new Date().toISOString().split('T')[0];
-    // Saldo em conta considera lançamentos até o mês selecionado/atual (compras parceladas futuras não tiram dinheiro do saldo em conta hoje!)
-    u.transactions.forEach(t => {
-      if (t.type === 'income') totalIn += t.amountCents;
-      else if (t.date <= `${ym}-31` || t.date <= todayStr) totalOut += t.amountCents;
-    });
+    let totalIn = 0, totalOut = 0; const todayStr = new Date().toISOString().split('T')[0];
+    u.transactions.forEach(t => { if (t.type === 'income') totalIn += t.amountCents; else if (t.date <= `${ym}-31` || t.date <= todayStr) totalOut += t.amountCents; });
     const cashBalance = totalIn - totalOut;
     const pendingBills = u.bills.filter(b => !b.paid && b.amountCents > 0).reduce((a, b) => a + b.amountCents, 0);
-    const freeMonth = cashBalance - pendingBills;
-    const daysLeft = getDaysRemainingInMonth(ym);
-    const dailySafe = Math.round(freeMonth / daysLeft);
-
+    const freeMonth = cashBalance - pendingBills, daysLeft = getDaysRemainingInMonth(ym), dailySafe = Math.round(freeMonth / daysLeft);
     const monthTxs = u.transactions.filter(t => t.date.startsWith(ym));
-    let monthIncome = 0, monthExpense = 0;
-    monthTxs.forEach(t => { if (t.type === 'income') monthIncome += t.amountCents; else monthExpense += t.amountCents; });
-
-    const nextYM = addMonthsYM(ym, 1);
-    const nextMonthCommitted = u.transactions.filter(t => t.type === 'expense' && t.date.startsWith(nextYM)).reduce((a, b) => a + b.amountCents, 0);
-
+    let monthIncome = 0, monthExpense = 0; monthTxs.forEach(t => { if (t.type === 'income') monthIncome += t.amountCents; else monthExpense += t.amountCents; });
+    const nextYM = addMonthsYM(ym, 1), nextMonthCommitted = u.transactions.filter(t => t.type === 'expense' && t.date.startsWith(nextYM)).reduce((a, b) => a + b.amountCents, 0);
     return { cashBalance, pendingBills, freeMonth, dailySafe, daysLeft, monthIncome, monthExpense, monthTxs, nextMonthCommitted };
   }
 
@@ -1487,12 +1460,8 @@ ${contextJson}`;
     document.getElementById('home-free-month').textContent = snap.freeMonth >= 0 ? `Livre no mês: ${formatBRL(snap.freeMonth)}` : `Faltam ${formatBRL(Math.abs(snap.freeMonth))} para fechar contas`;
 
     const futEl = document.getElementById('home-future-committed');
-    if (snap.nextMonthCommitted > 0) {
-      futEl.style.display = 'inline-block';
-      futEl.textContent = `📆 Parcelas próx. mês: ${formatBRL(snap.nextMonthCommitted)}`;
-    } else {
-      futEl.style.display = 'none';
-    }
+    if (snap.nextMonthCommitted > 0) { futEl.style.display = 'inline-block'; futEl.textContent = `📆 Parcelas próx. mês: ${formatBRL(snap.nextMonthCommitted)}`; }
+    else futEl.style.display = 'none';
 
     document.getElementById('home-cash').textContent = formatBRL(snap.cashBalance);
     document.getElementById('home-month-in').textContent = formatBRL(snap.monthIncome);
@@ -1520,7 +1489,21 @@ ${contextJson}`;
     document.getElementById('chat-messages').innerHTML = u.messages.map(m => {
       let cardHtml = '';
       if (m.card) {
-        if (m.card.kind === 'confirm_tx_list') {
+        if (m.card.kind === 'confirm_bill_create') {
+          const b = m.card.billDraft;
+          let btns = '';
+          if (m.card.status === 'pending') {
+            btns = `<button class="btn btn-income btn-sm" onclick="confirmBillCreateCard('${m.id}')">✅ Salvar em Contas</button>
+                    <button class="btn btn-secondary btn-sm" onclick="editBillDraftCard('${m.id}')">✏️ Editar</button>
+                    <button class="btn btn-secondary btn-sm" onclick="cancelDraftCard('${m.id}')">❌ Cancelar</button>`;
+          } else if (m.card.status === 'confirmed') {
+            btns = `<span style="font-size:12px; color:var(--income-green); font-weight:700;">✅ Salva na aba Contas!</span>
+                    <button class="btn btn-secondary btn-sm" onclick="switchTab('bills')">📅 Ver Contas</button>`;
+          } else {
+            btns = `<span style="font-size:12px; color:var(--text-secondary);">❌ Cancelado</span>`;
+          }
+          cardHtml = `<div class="action-card"><div class="action-card-top"><span>${CATEGORY_META[b.category]?.icon || '📅'} ${b.name}</span><span class="money">${formatBRL(b.amountCents, false)}</span></div><div class="action-card-sub">${b.category} • Vence dia ${String(b.dueDay).padStart(2,'0')}</div><div class="action-btns">${btns}</div></div>`;
+        } else if (m.card.kind === 'confirm_tx_list') {
           const rows = m.card.drafts.map(d => {
             const sign = d.type === 'income' ? '+' : '-', color = d.type === 'income' ? 'var(--income-green)' : 'var(--expense-red)';
             const parc = d.installments > 1 ? ` • ${d.installments}x` : '';
@@ -1571,8 +1554,7 @@ ${contextJson}`;
   function addSimpleTx({ type, desc, amountCents, category, date }) {
     const u = currentUser();
     const tx = { id: 't_' + Date.now() + Math.random().toString(36).slice(2,5), type, category, desc, amountCents, date };
-    u.transactions.unshift(tx);
-    u.lastChatTxId = tx.id;
+    u.transactions.unshift(tx); u.lastChatTxId = tx.id;
     return tx;
   }
 
@@ -1594,25 +1576,20 @@ ${contextJson}`;
 
   function openTxModal(t='expense', eid=null) {
     const u = currentUser();
-    document.getElementById('tx-edit-id').value = eid || '';
-    document.getElementById('tx-pending-msg-id').value = '';
+    document.getElementById('tx-edit-id').value = eid || ''; document.getElementById('tx-pending-msg-id').value = '';
     const db = document.getElementById('btn-delete-tx-modal');
     if (eid) {
       const tx = u.transactions.find(x => x.id === eid); if (!tx) return;
       document.getElementById('modal-tx-title').textContent = 'Editar';
       setTxFormType(tx.type);
-      document.getElementById('tx-desc').value = tx.desc;
-      document.getElementById('tx-amount').value = (tx.amountCents/100).toFixed(2);
-      document.getElementById('tx-date').value = tx.date;
-      document.getElementById('tx-category').value = tx.category;
+      document.getElementById('tx-desc').value = tx.desc; document.getElementById('tx-amount').value = (tx.amountCents/100).toFixed(2);
+      document.getElementById('tx-date').value = tx.date; document.getElementById('tx-category').value = tx.category;
       db.style.display = 'inline-flex';
     } else {
       document.getElementById('modal-tx-title').textContent = t === 'income' ? 'Entrou' : 'Gastei';
       setTxFormType(t);
-      document.getElementById('tx-desc').value = '';
-      document.getElementById('tx-amount').value = '';
-      const td = new Date().toISOString().split('T')[0];
-      document.getElementById('tx-date').value = td.startsWith(selectedMonth) ? td : `${selectedMonth}-01`;
+      document.getElementById('tx-desc').value = ''; document.getElementById('tx-amount').value = '';
+      const td = new Date().toISOString().split('T')[0]; document.getElementById('tx-date').value = td.startsWith(selectedMonth) ? td : `${selectedMonth}-01`;
       db.style.display = 'none';
     }
     openModal('modal-tx');
@@ -1620,14 +1597,9 @@ ${contextJson}`;
 
   function saveTxForm(e) {
     e.preventDefault();
-    const u = currentUser(), eid = document.getElementById('tx-edit-id').value;
-    const pendingMsgId = document.getElementById('tx-pending-msg-id').value;
-    const type = document.getElementById('tx-type').value;
-    const desc = document.getElementById('tx-desc').value.trim();
-    const amountCents = toCentsExact(document.getElementById('tx-amount').value);
-    const category = document.getElementById('tx-category').value;
-    const date = document.getElementById('tx-date').value;
-
+    const u = currentUser(), eid = document.getElementById('tx-edit-id').value, pendingMsgId = document.getElementById('tx-pending-msg-id').value;
+    const type = document.getElementById('tx-type').value, desc = document.getElementById('tx-desc').value.trim();
+    const amountCents = toCentsExact(document.getElementById('tx-amount').value), category = document.getElementById('tx-category').value, date = document.getElementById('tx-date').value;
     if (eid) {
       const i = u.transactions.findIndex(t => t.id === eid);
       if (i !== -1) u.transactions[i] = { ...u.transactions[i], type, desc, amountCents, category, date };
@@ -1735,8 +1707,46 @@ ${contextJson}`;
   function toggleSoundPref(){const u=currentUser();u.soundEnabled=document.getElementById('toggle-sound').checked;saveStore();if(u.soundEnabled)playPingSound();}
   function payBill(id){const u=currentUser(),b=u.bills.find(x=>x.id===id);if(!b||b.paid)return;if(b.amountCents<=0){openBillModal(id);return;}b.paid=true;addSimpleTx({type:'expense',category:b.category,desc:`Pgto ${b.name}`,amountCents:b.amountCents,date:new Date().toISOString().split('T')[0]});saveStore();renderAll();showToast(`"${b.name}" paga! ✅`,'✅');}
   function resetBillsForNewMonth(){currentUser().bills.forEach(b=>b.paid=false);saveStore();renderAll();showToast('Renovadas!','🔄');}
-  function openBillModal(eid=null){const u=currentUser();populateBillCategories();document.getElementById('bill-edit-id').value=eid||'';const d=document.getElementById('btn-delete-bill-modal');if(eid){const b=u.bills.find(x=>x.id===eid);document.getElementById('modal-bill-title').textContent='Editar Conta';document.getElementById('bill-name').value=b.name;document.getElementById('bill-amount').value=b.amountCents?(b.amountCents/100).toFixed(2):'';document.getElementById('bill-day').value=b.dueDay;document.getElementById('bill-cat').value=b.category;d.style.display='inline-flex';}else{document.getElementById('modal-bill-title').textContent='Nova Conta';document.getElementById('bill-name').value='';document.getElementById('bill-amount').value='';document.getElementById('bill-day').value=10;d.style.display='none';}openModal('modal-bill');}
-  function saveBillForm(e){e.preventDefault();const u=currentUser(),eid=document.getElementById('bill-edit-id').value,obj={name:document.getElementById('bill-name').value.trim(),amountCents:toCentsExact(document.getElementById('bill-amount').value),dueDay:parseInt(document.getElementById('bill-day').value,10),category:document.getElementById('bill-cat').value};if(eid){const i=u.bills.findIndex(b=>b.id===eid);if(i!==-1)u.bills[i]={...u.bills[i],...obj};}else u.bills.push({id:'b_'+Date.now(),...obj,paid:false});saveStore();closeModal('modal-bill');renderAll();showToast('Conta salva!','📅');}
+
+  function openBillModal(eid=null){
+    const u=currentUser(); populateBillCategories();
+    document.getElementById('bill-edit-id').value=eid||'';
+    document.getElementById('bill-pending-msg-id').value='';
+    const d=document.getElementById('btn-delete-bill-modal');
+    if(eid){
+      const b=u.bills.find(x=>x.id===eid);
+      document.getElementById('modal-bill-title').textContent='Editar Conta';
+      document.getElementById('bill-name').value=b.name;
+      document.getElementById('bill-amount').value=b.amountCents?(b.amountCents/100).toFixed(2):'';
+      document.getElementById('bill-day').value=b.dueDay;
+      document.getElementById('bill-cat').value=b.category;
+      d.style.display='inline-flex';
+    }else{
+      document.getElementById('modal-bill-title').textContent='Nova Conta';
+      document.getElementById('bill-name').value=''; document.getElementById('bill-amount').value=''; document.getElementById('bill-day').value=10;
+      d.style.display='none';
+    }
+    openModal('modal-bill');
+  }
+
+  function saveBillForm(e){
+    e.preventDefault();
+    const u=currentUser(), eid=document.getElementById('bill-edit-id').value, pendingMsgId=document.getElementById('bill-pending-msg-id').value;
+    const obj={ name:document.getElementById('bill-name').value.trim(), amountCents:toCentsExact(document.getElementById('bill-amount').value), dueDay:parseInt(document.getElementById('bill-day').value,10), category:document.getElementById('bill-cat').value };
+    if(eid){
+      const i=u.bills.findIndex(b=>b.id===eid);
+      if(i!==-1)u.bills[i]={...u.bills[i],...obj};
+    }else{
+      const newBill = {id:'b_'+Date.now(),...obj,paid:false};
+      u.bills.push(newBill);
+      if(pendingMsgId){
+        const pm=u.messages.find(m=>m.id===pendingMsgId);
+        if(pm&&pm.card){ pm.card.status='confirmed'; pm.card.createdBillId=newBill.id; pm.card.billDraft=obj; }
+      }
+    }
+    saveStore(); closeModal('modal-bill'); renderAll(); showToast('Conta salva!','📅');
+  }
+
   function askDeleteBill(id){const u=currentUser(),b=u.bills.find(x=>x.id===id);askConfirm('Excluir conta?',`Apagar "${b.name}"?`,()=>{u.bills=u.bills.filter(x=>x.id!==id);saveStore();renderAll();});}
   function deleteCurrentEditingBill(){const id=document.getElementById('bill-edit-id').value;closeModal('modal-bill');if(id)askDeleteBill(id);}
   function openGoalModal(eid=null){const u=currentUser();document.getElementById('goal-edit-id').value=eid||'';const d=document.getElementById('btn-delete-goal-modal');if(eid){const g=u.goals.find(x=>x.id===eid);document.getElementById('modal-goal-title').textContent='Editar Meta';document.getElementById('goal-name').value=g.name;document.getElementById('goal-target').value=(g.targetCents/100).toFixed(2);document.getElementById('goal-current').value=(g.currentCents/100).toFixed(2);document.getElementById('goal-date').value=g.date;d.style.display='inline-flex';}else{document.getElementById('modal-goal-title').textContent='Nova Meta';document.getElementById('goal-name').value='';document.getElementById('goal-target').value='';document.getElementById('goal-current').value='0';document.getElementById('goal-date').value='2027-12-31';d.style.display='none';}openModal('modal-goal');}
